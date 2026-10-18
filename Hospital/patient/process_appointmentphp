@@ -1,0 +1,72 @@
+<?php
+session_start();
+include "../includes/db_connect.php";
+
+// Check if user is logged in as a patient
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Patient') {
+    header("Location: login.php");
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['book_appointment'])) {
+    $patient_id = $_SESSION['user_id'];
+    $doctor_id = $_POST['doctor_id'] ?? null;
+    $preferred_date = $_POST['preferred_date'];
+    $preferred_time = $_POST['preferred_time'];
+    $type = $_POST['type'];
+    $urgency = $_POST['urgency'];
+    $notes = $_POST['notes'] ?? '';
+    
+    // Validate required fields
+    if (empty($preferred_date) || empty($type)) {
+        $_SESSION['error'] = "Please fill in all required fields.";
+        header("Location: book_appointment.php");
+        exit;
+    }
+    
+    try {
+        // Get patient record
+        $patient_stmt = $pdo->prepare("
+            SELECT id FROM patients 
+            WHERE id = ? OR user_id = ? 
+            OR EXISTS (SELECT 1 FROM users u WHERE u.id = ? AND (u.phone = patients.phone OR u.email = patients.email))
+        ");
+        $patient_stmt->execute([$patient_id, $patient_id, $patient_id]);
+        $patient = $patient_stmt->fetch();
+        
+        if (!$patient) {
+            $_SESSION['error'] = "Patient record not found.";
+            header("Location: book_appointment.php");
+            exit;
+        }
+        
+        // Insert appointment request
+        $stmt = $pdo->prepare("
+            INSERT INTO appointment_requests 
+            (patient_id, doctor_id, preferred_date, preferred_time, type, urgency, notes, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+        ");
+        
+        $stmt->execute([
+            $patient['id'],
+            $doctor_id,
+            $preferred_date,
+            $preferred_time,
+            $type,
+            $urgency,
+            $notes
+        ]);
+        
+        $_SESSION['success'] = "Appointment request submitted successfully! It will be reviewed by our staff.";
+        header("Location: book_appointment.php?success=1");
+        exit;
+        
+    } catch (PDOException $e) {
+        $_SESSION['error'] = "Error submitting appointment request: " . $e->getMessage();
+        header("Location: book_appointment.php");
+        exit;
+    }
+} else {
+    header("Location: book_appointment.php");
+    exit;
+}

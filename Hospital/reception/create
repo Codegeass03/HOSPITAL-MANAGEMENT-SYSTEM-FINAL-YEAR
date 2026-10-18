@@ -1,0 +1,44 @@
+<?php
+session_start();
+include "includes/db_connect.php";
+
+// Create test hospital bills
+try {
+    // Get a sample patient
+    $patient_stmt = $pdo->query("SELECT id FROM patients LIMIT 1");
+    $patient = $patient_stmt->fetch();
+    
+    if ($patient) {
+        $patient_id = $patient['id'];
+        
+        // Create test bills for the last 7 days
+        for ($i = 0; $i < 5; $i++) {
+            $bill_date = date('Y-m-d H:i:s', strtotime("-$i days"));
+            $bill_number = 'BL-' . date('Ymd') . '-' . ($i + 1);
+            $total_amount = rand(500, 5000);
+            $paid_amount = rand(0, $total_amount);
+            $balance_amount = $total_amount - $paid_amount;
+            $status = $balance_amount > 0 ? ($paid_amount > 0 ? 'partial' : 'pending') : 'paid';
+            
+            $stmt = $pdo->prepare("
+                INSERT INTO billing (patient_id, bill_number, bill_date, total_amount, paid_amount, balance_amount, status, payment_method, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'cash', 1)
+            ");
+            $stmt->execute([$patient_id, $bill_number, $bill_date, $total_amount, $paid_amount, $balance_amount, $status]);
+            
+            $bill_id = $pdo->lastInsertId();
+            
+            // Add bill items
+            $item_stmt = $pdo->prepare("
+                INSERT INTO bill_items (bill_id, item_description, quantity, unit_price, total_amount, item_type)
+                VALUES (?, ?, 1, ?, ?, 'consultation')
+            ");
+            $item_stmt->execute([$bill_id, 'Medical Consultation', 1, $total_amount, $total_amount]);
+        }
+        
+        echo "Test bills created successfully!";
+    }
+} catch (PDOException $e) {
+    echo "Error creating test bills: " . $e->getMessage();
+}
+?>

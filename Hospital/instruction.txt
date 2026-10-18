@@ -1,0 +1,82 @@
+HOSPITAL/
+├─ app/
+│  ├─ Controllers/
+│  │  ├─ BaseController.php
+│  │  ├─ AuthController.php
+│  │  ├─ DashboardController.php
+│  │  ├─ PatientsController.php
+│  │  ├─ AppointmentsController.php
+│  │  ├─ AdmissionsController.php
+│  │  ├─ PrescriptionsController.php
+│  │  ├─ PharmacyController.php
+│  │  ├─ InventoryController.php
+│  │  ├─ LabController.php
+│  │  ├─ BillingController.php
+│  │  └─ ReportsController.php
+│  ├─ Models/
+│  │  ├─ BaseModel.php
+│  │  ├─ User.php
+│  │  ├─ Role.php
+│  │  ├─ Patient.php
+│  │  ├─ Appointment.php
+│  │  ├─ Admission.php
+│  │  ├─ Prescription.php
+│  │  ├─ Medicine.php
+│  │  ├─ InventoryItem.php
+│  │  ├─ Invoice.php
+│  │  └─ ... (per table)
+│  ├─ Views/
+│  │  ├─ layouts/
+│  │  │  ├─ main.php       -- header + sidebar + footer
+│  │  │  └─ auth.php
+│  │  ├─ auth/
+│  │  │  ├─ login.php
+│  │  │  └─ register.php
+│  │  ├─ dashboard/
+│  │  │  └─ index.php
+│  │  ├─ patients/
+│  │  │  ├─ index.php
+│  │  │  ├─ create.php
+│  │  │  └─ view.php
+│  │  └─ ... (other modules)
+│  ├─ Core/
+│  │  ├─ Router.php
+│  │  ├─ Request.php
+│  │  ├─ Response.php
+│  │  ├─ Session.php
+│  │  ├─ Auth.php        -- authentication helper
+│  │  └─ Middleware.php  -- RBAC middleware
+│  └─ Helpers/
+│     ├─ Validator.php
+│     ├─ Sanitizer.php
+│     └─ FileUpload.php
+├─ config/
+│  ├─ database.php
+│  ├─ app.php
+│  └─ routes.php
+├─ public/
+│  ├─ index.php
+│  ├─ .htaccess
+│  ├─ css/
+│  ├─ js/
+│  ├─ uploads/
+│  └─ assets/
+├─ storage/
+│  ├─ logs/
+│  └─ reports/
+├─ vendor/                -- composer packages if any (e.g., phpoffice/phpspreadsheet, mpdf)
+├─ tests/
+├─ scripts/
+│  └─ db_medicare_hms.sql
+└─ README.md
+
+
+Key points:
+
+Keep public/ as the only web-accessible folder. All app logic lives outside public/.
+
+app/Core/Router.php handles parsing the URL (/patients/view/1) and instantiates controllers.
+
+app/Core/Middleware.php will house RBAC checks (see Phase 2 plan).
+
+views/layouts/main.php contains the Bootstrap 5 header/sidebar and yields content; include a top nav and sidebar with links conditional on role.

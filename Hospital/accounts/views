@@ -1,0 +1,77 @@
+CREATE OR REPLACE VIEW patient_unified_unpaid_services_view AS
+
+/* ================= CONSULTATION ================= */
+SELECT
+    a.patient_id,
+    a.id AS reference_id,
+    a.appointment_number AS reference_number,
+    'consultation' AS service_type,
+    CONCAT('Consultation - Appointment #', a.appointment_number) AS description,
+    a.consultation_fee AS total_amount,
+    0 AS paid_amount,
+    a.consultation_fee AS balance_amount,
+    a.appointment_date AS service_date,
+    a.status AS payment_status
+FROM appointments a
+WHERE a.consultation_fee > 0
+AND a.status IN ('completed','confirmed')
+
+UNION ALL
+
+/* ================= LAB ================= */
+SELECT
+    lo.patient_id,
+    lo.id AS reference_id,
+    lo.order_number AS reference_number,
+    'lab' AS service_type,
+    CONCAT('Lab Test - Order #', lo.order_number) AS description,
+    lo.total_amount,
+    COALESCE(lo.paid_amount,0),
+    (lo.total_amount - COALESCE(lo.paid_amount,0)) AS balance_amount,
+    lo.order_date AS service_date,
+    lo.payment_status
+FROM lab_orders lo
+WHERE lo.total_amount > 0
+AND (lo.paid_amount IS NULL OR lo.paid_amount < lo.total_amount)
+
+UNION ALL
+
+/* ================= PHARMACY ================= */
+SELECT
+    pb.patient_id,
+    pb.id AS reference_id,
+    pb.bill_no AS reference_number,
+    'pharmacy' AS service_type,
+    CONCAT('Pharmacy - Bill #', pb.bill_no) AS description,
+    pb.total_amount,
+    COALESCE(pb.paid_amount,0),
+    COALESCE(pb.balance_amount, pb.total_amount - COALESCE(pb.paid_amount,0)) AS balance_amount,
+    pb.date AS service_date,
+    pb.payment_status
+FROM pharmacy_billing pb
+WHERE COALESCE(pb.balance_amount, pb.total_amount - COALESCE(pb.paid_amount,0)) > 0
+
+UNION ALL
+
+/* ================= ADMISSION ================= */
+SELECT
+    ba.patient_id,
+    ba.id AS reference_id,
+    CONCAT('ADM-', ba.id) AS reference_number,
+    'admission' AS service_type,
+    CONCAT('Bed Charges - ', w.ward_name, ' (Bed ', b.bed_number, ')') AS description,
+    COALESCE(
+        ba.total_charges,
+        DATEDIFF(COALESCE(ba.actual_discharge_date, CURDATE()), ba.admission_date) * b.price_per_day
+    ) AS total_amount,
+    COALESCE(ba.paid_amount,0),
+    COALESCE(
+        ba.total_charges,
+        DATEDIFF(COALESCE(ba.actual_discharge_date, CURDATE()), ba.admission_date) * b.price_per_day
+    ) - COALESCE(ba.paid_amount,0) AS balance_amount,
+    ba.admission_date AS service_date,
+    ba.status AS payment_status
+FROM bed_assignments ba
+INNER JOIN beds b ON ba.bed_id = b.id
+INNER JOIN ward w ON b.ward_id = w.id
+WHERE ba.status IN ('active','discharged');

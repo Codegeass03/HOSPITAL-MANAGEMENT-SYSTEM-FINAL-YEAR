@@ -1,0 +1,20 @@
+# public/.htaccess
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Prevent direct access to certain file types
+    RewriteRule ^(storage|config|app|vendor)/ - [F,L]
+
+    # If file or directory exists, serve it directly
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Otherwise route to index.php
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    # If mod_rewrite is not available, show a simple message
+    ErrorDocument 404 /index.php
+</IfModule>
